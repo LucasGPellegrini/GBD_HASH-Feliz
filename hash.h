@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 typedef entry_number_t directory_size_t;
-typedef entry_number_t bucket_t;
+typedef long int bucket_t;
 typedef entry_number_t bucket_size_t;
 typedef entry_number_t depth_t;
 
