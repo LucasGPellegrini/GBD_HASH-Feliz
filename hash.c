@@ -49,7 +49,7 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
     }
 
     strcpy(hash->fname, hdir);
-    hash->fp = fopen(hash->fname, "wb");
+    hash->fp = fopen(hash->fname, "w+");
     if(hash->fp == NULL){
         free(hash->dr);
         free(hash);
@@ -91,7 +91,7 @@ int SRCH_HASH(Hash hash, entry_number_t chave, Registro reg){
     if(_NVLD_HASH(hash) || chave == 0 || reg == NULL) return 0;
 
     // Abre o arquivo hash
-    hash->fp = fopen(hash->fname, "rb");
+    hash->fp = fopen(hash->fname, "r");
     if(hash->fp == NULL) return 0;
 
     directory_size_t bucket = _HASH_FUNCTION(chave, hash->dr_size);
@@ -113,43 +113,32 @@ int INST_HASH(Hash hash, Registro reg){
     if(_NVLD_HASH(hash) || reg == NULL) return 0;
 
     // Abre o arquivo hash
-    hash->fp = fopen(hash->fname, "wb");
+    hash->fp = fopen(hash->fname, "r+");
     if(hash->fp == NULL) return 0;
 
     directory_size_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
 
     // Achar bucket com essa hash
-    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET); 
-    printf("\nBucket localizado: (B%u,%u)\n", hash->dr[bucket].bucket, hash->dr[bucket].pl); 
+    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);    
 
-    // Vai a procura de um slot vazio no bucket da hash (nseq == 0)
-    bucket_size_t i;
     struct registro aux;
-    for(i = 0; i < hash->bucket_size; i++){
-        if(!fread(&aux, sizeof(struct registro), 1, hash->fp)) {
-            printf("Nao Leu o registro no bucket\n");
-            fclose(hash->fp);
-            return 0;
-        }
 
-        if(aux.nseq == 0) {
-            printf("Achou registro vazio no bucket\n");            
-            break;
-        }
+    // Vai a procura de um slot vazio no bucket original da hash (nseq == 0)
+    bucket_size_t original;
+    for(original = 0; original < hash->bucket_size; original++){
+        fread(&aux, sizeof(struct registro), 1, hash->fp);
+        if(aux.nseq == 0) break;
     }
 
-    // Bucket nao-cheio (insercao tranquila)
-    if(i != hash->bucket_size){
+    // Bucket original nao-cheio (insercao tranquila)
+    if(original != hash->bucket_size){
         fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
-        fwrite(&reg, sizeof(struct registro), 1, hash->fp);
-        fclose(hash->fp);
-        return 1;
+        fwrite(reg, sizeof(struct registro), 1, hash->fp);
     }else{
 
-        // Caso contrario, bucket cheio
+        // Caso contrario, bucket original cheio
 
         struct registro buffer[hash->bucket_size];
-        struct registro aux;
         aux.nseq = 0;
 
         // Precisa duplicar diretorio (pg == pl)
@@ -162,9 +151,10 @@ int INST_HASH(Hash hash, Registro reg){
             hash->dr_size *= 2;
             hash->pg++;
 
+            // Copia a primeira metade para a segunda metade
             for(directory_size_t i = 0; i < hash->dr_size / 2; i++){
-                hash->dr[2*i].pl = hash->dr[i].pl;
-                hash->dr[2*i].bucket = hash->dr[i].bucket;
+                hash->dr[hash->dr_size / 2 + i].pl = hash->dr[i].pl;
+                hash->dr[hash->dr_size / 2 + i].bucket = hash->dr[i].bucket;
             }
         }
 
@@ -172,22 +162,30 @@ int INST_HASH(Hash hash, Registro reg){
         // Se nao precisou duplicar, nao passou pelo if e eh soh
         // Arrumar o diretorio (criar novo bucket no final)
 
-        // Proximo indice que aponta pro mesmo bucket cheio
-        bucket_t bucket_duplicado = (i << (hash->pg - 1)) + i; // Conferir conta
-        hash->dr[i].pl++;
+        // Proximo indice que aponta pro mesmo bucket original cheio
+        bucket_t bucket_duplicado = bucket + hash->dr_size / 2; // Conferir conta
+        hash->dr[bucket].pl++;
+
+        // Arruma as info do bucket duplicado (novo)
+        // Ele tem a mesma pl nova de pg nova
+        // Ele estah no final do arquivo
         hash->dr[bucket_duplicado].pl++;
+        fseek(hash->fp, 0, SEEK_END);
+        hash->dr[bucket_duplicado].bucket = ftell(hash->fp);
+
         long int ultimo_slot;
 
-        fseek(hash->fp, hash->dr[i].bucket, SEEK_SET);
+        // Vai para o bucket original
+        fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);
 
-        // Pega todos elementos do bucket original
+        // Pega todos elementos do bucket original e arruma eles
         for(bucket_size_t j = 0; j < hash->bucket_size; j++){
             fread(&buffer[j], sizeof(struct registro), 1, hash->fp);
             // Registro faz ainda parte do bucket original
-            if(hash->dr[_HASH_FUNCTION(buffer[j].nseq, _CALC_N(hash->dr[i].pl))].bucket == hash->dr[i].bucket) buffer[j].nseq = 0;
+            if(hash->dr[_HASH_FUNCTION(buffer[j].nseq, hash->dr_size)].bucket == hash->dr[bucket].bucket) buffer[j].nseq = 0;
             else{
                 // Caso contrario, registro tem que ser colocado no bucket duplicado
-
+                // Portanto, abaixo, registro eh apagado do bucket original
                 fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
                 ultimo_slot = ftell(hash->fp);
                 // Limpa registro (nseq = 0) do bucket original
@@ -195,11 +193,10 @@ int INST_HASH(Hash hash, Registro reg){
             }
         }
 
+        // Vai para o bucket duplicado
         fseek(hash->fp, hash->dr[bucket_duplicado].bucket, SEEK_SET);
 
-        fseek(hash->fp, 0, SEEK_END);
-        hash->dr[bucket_duplicado].bucket = ftell(hash->fp);
-
+        // Escreve o buffer no bucket duplicado (cria no final do arquivo)
         bucket_size_t qtd = 0;
         for(bucket_size_t j = 0; j < hash->bucket_size; j++){
             if(buffer[j].nseq != 0){
@@ -208,8 +205,8 @@ int INST_HASH(Hash hash, Registro reg){
             }
         }
 
-        // Registro cai no bucket original
-        if(_HASH_FUNCTION(reg->nseq, hash->dr_size) == i){
+        // Registro da insercao cai no bucket original
+        if(_HASH_FUNCTION(reg->nseq, hash->dr_size) == bucket){
             fseek(hash->fp, ultimo_slot, SEEK_SET);
             fwrite(reg, sizeof(struct registro), 1, hash->fp);
         }
@@ -220,6 +217,7 @@ int INST_HASH(Hash hash, Registro reg){
             qtd++;
         }
 
+        // Enche o resto do bucket duplicado com nseq = 0
         fseek(hash->fp, hash->dr[bucket_duplicado].bucket + qtd * sizeof(struct registro), SEEK_SET);
         for(qtd; qtd < hash->bucket_size; qtd++){
             fwrite(&aux, sizeof(struct registro), 1, hash->fp);
@@ -237,7 +235,7 @@ int RMV_HASH(Hash hash, entry_number_t chave, Registro reg){
     if(_NVLD_HASH(hash) || reg == NULL) return 0;
 
     // Abre o arquivo hash
-    hash->fp = fopen(hash->fname, "wb");
+    hash->fp = fopen(hash->fname, "w");
     if(hash->fp == NULL) return 0;
 
     bucket_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
@@ -266,7 +264,7 @@ int PRNT_HASH(Hash hash){
     if(_NVLD_HASH(hash)) return 0;
 
     // Abre o arquivo hash
-    hash->fp = fopen(hash->fname, "rb");
+    hash->fp = fopen(hash->fname, "r");
     if(hash->fp == NULL) return 0;
 
     printf("Tamanho diretorio = %u\n", hash->dr_size);

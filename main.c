@@ -88,14 +88,14 @@ int main()
 	 			break;
 
             case 5:
-                PRNT_HASH(h);
+                if(!PRNT_HASH(h)) printf("Houve erro ao imprimir Hash!\n\n");
                 break;
 
 			case MAXOP:
 				printf("Encerrando o programa.\n");
 				
 				//esperando n segundos antes de encerrar o programa
-				int n = 3;
+				int n = 1;
 				clock_t inicio = clock();
 				while((clock() - inicio) * 1000 / CLOCKS_PER_SEC < n * 1000);		
 				break;
