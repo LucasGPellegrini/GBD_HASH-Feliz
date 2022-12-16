@@ -6,9 +6,10 @@ int main(){
 
     Hash h;
     struct registro aux;
-    CRT_HASH(h, 4);
+    printf("%d", CRT_HASH(&h, 2, "arquivo"));
 
     while(op != 0){
+        printf("Entre com a opcao: ");
         scanf("%d", &op);
         switch(op){
 
@@ -16,15 +17,16 @@ int main(){
                 printf("Entre com a registro:\n");
                 scanf("%u", &aux.nseq);
                 scanf("%u", &aux.text);
-                INST_HASH(h, &aux);
+                printf("%d", INST_HASH(h, &aux));
                 break;
 
             case 2:
                 printf("Imprimir hash!\n");
 
-                PRNT_HASH(h);
+                printf("%d", PRNT_HASH(h));
                 break;
         }
+
         fflush(stdin);
     }
 

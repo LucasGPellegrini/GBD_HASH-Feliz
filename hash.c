@@ -1,8 +1,11 @@
 #include "hash.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-bucket_t _CALC_N(depth_t p){
+#define MAX_REG 1024
+
+directory_size_t _CALC_N(depth_t p){
     depth_t np = 1;
 
     for(depth_t i = 0; i < p; i++)
@@ -12,21 +15,25 @@ bucket_t _CALC_N(depth_t p){
 }
 
 // Funcao hash (h(key) mod N, com h(key) = key)
-bucket_t _HASH_FUNCTION(entry_number_t chave, bucket_t N){
+directory_size_t _HASH_FUNCTION(entry_number_t chave, directory_size_t N){
     return chave % N;
 }
 
-int CRT_HASH(Hash hash, depth_t pg_inicial, char* hdir){
-    if(hash == NULL || pg_inicial < 0) return 0;
+int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
+    if(hash_ptr == NULL || pg_inicial <= 0 || hdir == NULL) return 0;
 
-    hash = malloc(sizeof(struct hash));
-    if(hash == NULL) return 0;
+    *hash_ptr = malloc(sizeof(struct hash));
+    if(*hash_ptr == NULL) return 0;
+
+    Hash hash = *hash_ptr;
+
+    printf("oi");
 
     directory_size_t dr_size = _CALC_N(pg_inicial);
 
     hash->dr_size = dr_size;
     hash->bucket_size = dr_size;
-    hash->bucket_number = hash->dr_size;
+    hash->bucket_number = dr_size;
     hash->pg = pg_inicial;
 
     hash->dr = malloc(hash->dr_size * sizeof(struct directory_entry));
@@ -36,7 +43,17 @@ int CRT_HASH(Hash hash, depth_t pg_inicial, char* hdir){
         return 0;
     }
 
-    hash->fp = fopen(hdir, "wb");
+    hash->fname = malloc(MAX_REG * sizeof(char));
+    if(hash->dr == NULL){
+        free(hash);
+        hash = NULL;
+        return 0;
+    }
+
+    printf("oi");
+
+    strcpy(hash->fname, hdir);
+    hash->fp = fopen(hash->fname, "wb");
     if(hash->fp == NULL){
         free(hash->dr);
         free(hash);
@@ -44,19 +61,20 @@ int CRT_HASH(Hash hash, depth_t pg_inicial, char* hdir){
         return 0;
     }
 
-    strcpy(&hash->fname, hdir);
+    
+    printf("oi");
 
     rewind(hash->fp);
     long int fp_pointer;
 
     struct registro reg;
     reg.nseq = 0;
-    strcpy(&reg->text, "\0");
+
+    printf("oi");
 
     for(directory_size_t i = 0; i < hash->dr_size; i++){
         fp_pointer = ftell(hash->fp);
-        if(fwrite(&reg, sizeof(struct registro), hash->dr_size, hash->fp)
-        != hash->dr_size * sizeof(struct registro)){
+        if(fwrite(&reg, sizeof(struct registro), hash->bucket_size, hash->fp) != hash->bucket_size){
             fclose(hash->fp);
             free(hash->dr);
             free(hash);
@@ -73,17 +91,17 @@ int CRT_HASH(Hash hash, depth_t pg_inicial, char* hdir){
 }
 
 int _NVLD_HASH(Hash hash){
-    return(hash == NULL || hash->dr == NULL || hash->pg < 0 || hash->fp == NULL);
+    return(hash == NULL || hash->dr == NULL || hash->pg <= 0 || hash->fname == NULL);
 }
 
 int SRCH_HASH(Hash hash, entry_number_t chave, Registro reg){
-    if(_NVLD_HASH(hash) || !chave || reg == NULL) return 0;
+    if(_NVLD_HASH(hash) || chave == 0 || reg == NULL) return 0;
 
     // Abre o arquivo hash
     hash->fp = fopen(hash->fname, "rb");
     if(hash->fp == NULL) return 0;
 
-    bucket_t bucket = _HASH_FUNCTION(chave, hash->dr_size);
+    directory_size_t bucket = _HASH_FUNCTION(chave, hash->dr_size);
 
     fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);
 
@@ -105,10 +123,10 @@ int INST_HASH(Hash hash, Registro reg){
     hash->fp = fopen(hash->fname, "wb");
     if(hash->fp == NULL) return 0;
 
-    bucket_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
+    directory_size_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
 
     // Achar bucket com essa hash
-    fseek(hash->fp, bucket, SEEK_SET);    
+    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);    
 
     // Vai a procura de um slot vazio no bucket da hash (nseq == 0)
     bucket_size_t i;
@@ -168,7 +186,7 @@ int INST_HASH(Hash hash, Registro reg){
                 fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
                 ultimo_slot = ftell(hash->fp);
                 // Limpa registro (nseq = 0) do bucket original
-                fwrite(aux, sizeof(struct registro), 1, hash->fp);
+                fwrite(&aux, sizeof(struct registro), 1, hash->fp);
             }
         }
 
@@ -210,7 +228,7 @@ int INST_HASH(Hash hash, Registro reg){
     return 1;
 }
 
-int RMV_HASH(Hash hash, Registro reg){
+int RMV_HASH(Hash hash, entry_number_t chave, Registro reg){
     if(_NVLD_HASH(hash) || reg == NULL) return 0;
 
     // Abre o arquivo hash
@@ -242,6 +260,10 @@ int RMV_HASH(Hash hash, Registro reg){
 int PRNT_HASH(Hash hash){
     if(_NVLD_HASH(hash)) return 0;
 
+    // Abre o arquivo hash
+    hash->fp = fopen(hash->fname, "rb");
+    if(hash->fp == NULL) return 0;
+
     printf("Tamanho diretorio = %u\n", hash->dr_size);
     printf("Buckets instanciados = %u\n", hash->bucket_number);
     printf("Numero de registro por bucket = %u\n", hash->bucket_size);
@@ -252,15 +274,20 @@ int PRNT_HASH(Hash hash){
     struct registro aux;
 
     for(directory_size_t i = 0; i < hash->dr_size; i++){
-        printf("Bucket = %u | Pl = %u :", hash->dr[i].bucket, hash->dr[i].pl);
+        printf("(B%u,%u) :", hash->dr[i].bucket, hash->dr[i].pl);
 
         fseek(hash->fp, hash->dr[i].bucket, SEEK_SET);
 
         for(bucket_size_t j = 0; j < hash->bucket_size; j++){
             fread(&aux, sizeof(struct registro), 1, hash->fp);
-            printf("Nseq = %d - Text = %s", aux.nseq, aux.text);
+            if(aux.nseq != 0) printf(" <%llu, %s> |", aux.nseq, aux.text);
+            else printf(" <%llu> |", aux.nseq);
         }
+
+        printf("\n\n");
     }
+
+    fclose(hash->fp);
 
     return 1;
 }

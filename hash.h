@@ -32,10 +32,10 @@ struct hash{
 
 typedef struct hash* Hash;
 
-int CRT_HASH(Hash hash, depth_t pg_inicial, char* hdir);
+int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir);
 int SRCH_HASH(Hash hash, entry_number_t chave, Registro reg);
 int INST_HASH(Hash hash, Registro reg);
-int RMV_HASH(Hash hash, Registro reg);
+int RMV_HASH(Hash hash, entry_number_t chave, Registro reg);
 int PRNT_HASH(Hash hash);
 
 #endif
