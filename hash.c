@@ -27,8 +27,6 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
 
     Hash hash = *hash_ptr;
 
-    printf("Espaco do HASH alocado!\n");
-
     directory_size_t dr_size = _CALC_N(pg_inicial);
 
     hash->dr_size = dr_size;
@@ -50,8 +48,6 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
         return 0;
     }
 
-    printf("Diretorio Alocado\n");
-
     strcpy(hash->fname, hdir);
     hash->fp = fopen(hash->fname, "wb");
     if(hash->fp == NULL){
@@ -61,24 +57,15 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
         return 0;
     }
 
-    
-    printf("Arquivo aberto\n");
-
     rewind(hash->fp);
     long int fp_pointer;
 
     struct registro reg;
     reg.nseq = 0;
-    strcpy(reg.text, "");
 
-    printf("Ponteiro rewinded\n");
-
-    // Por algum motivo escrever um registro inválido por vez funciona,
-    // Mas escrever os quatro de uma vez não.
-    // Vou reclamar? também não
     for(directory_size_t i = 0; i < hash->dr_size; i++){
         fp_pointer = ftell(hash->fp);
-        for(int j = 0; j < hash->bucket_size; j++){
+        for(directory_size_t j = 0; j < hash->bucket_size; j++){
             if(!fwrite(&reg, sizeof(struct registro), 1, hash->fp)){
                 fclose(hash->fp);
                 free(hash->dr);
@@ -132,31 +119,19 @@ int INST_HASH(Hash hash, Registro reg){
     directory_size_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
 
     // Achar bucket com essa hash
-    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET); 
-    printf("\nBucket localizado: (B%u,%u)\n", hash->dr[bucket].bucket, hash->dr[bucket].pl); 
+    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);    
 
     // Vai a procura de um slot vazio no bucket da hash (nseq == 0)
     bucket_size_t i;
-    struct registro aux;
     for(i = 0; i < hash->bucket_size; i++){
-        if(!fread(&aux, sizeof(struct registro), 1, hash->fp)) {
-            printf("Nao Leu o registro no bucket\n");
-            fclose(hash->fp);
-            return 0;
-        }
-
-        if(aux.nseq == 0) {
-            printf("Achou registro vazio no bucket\n");            
-            break;
-        }
+        if(!fread(reg, sizeof(struct registro), 1, hash->fp)) return 0;
+        if(reg->nseq == 0) break;
     }
 
     // Bucket nao-cheio (insercao tranquila)
     if(i != hash->bucket_size){
         fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
-        fwrite(&reg, sizeof(struct registro), 1, hash->fp);
-        fclose(hash->fp);
-        return 1;
+        fwrite(reg, sizeof(struct registro), 1, hash->fp);
     }else{
 
         // Caso contrario, bucket cheio
@@ -292,14 +267,15 @@ int PRNT_HASH(Hash hash){
     struct registro aux;
 
     for(directory_size_t i = 0; i < hash->dr_size; i++){
-        printf("(B%u,%u) :", hash->dr[i].bucket, hash->dr[i].pl);
+        printf("(B%u, %u):", hash->dr[i].bucket, hash->dr[i].pl);
 
         fseek(hash->fp, hash->dr[i].bucket, SEEK_SET);
 
         for(bucket_size_t j = 0; j < hash->bucket_size; j++){
             fread(&aux, sizeof(struct registro), 1, hash->fp);
-            if(aux.nseq != 0) printf(" <%llu, %s> |", aux.nseq, aux.text);
-            else printf(" <%llu> |", aux.nseq);
+
+            if(aux.nseq != 0) printf(" <%u, %s> |", aux.nseq, aux.text);
+            else printf(" <%u> |", aux.nseq);
         }
 
         printf("\n\n");

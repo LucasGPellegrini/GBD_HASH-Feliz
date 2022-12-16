@@ -10,8 +10,6 @@
 
 typedef unsigned int entry_number_t;
 
-
-
 struct registro{
 	entry_number_t nseq;
 	char text[TEXT_SIZE];
