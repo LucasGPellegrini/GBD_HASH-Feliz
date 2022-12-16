@@ -119,19 +119,31 @@ int INST_HASH(Hash hash, Registro reg){
     directory_size_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
 
     // Achar bucket com essa hash
-    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);    
+    fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET); 
+    printf("\nBucket localizado: (B%u,%u)\n", hash->dr[bucket].bucket, hash->dr[bucket].pl); 
 
     // Vai a procura de um slot vazio no bucket da hash (nseq == 0)
     bucket_size_t i;
+    struct registro aux;
     for(i = 0; i < hash->bucket_size; i++){
-        if(!fread(reg, sizeof(struct registro), 1, hash->fp)) return 0;
-        if(reg->nseq == 0) break;
+        if(!fread(&aux, sizeof(struct registro), 1, hash->fp)) {
+            printf("Nao Leu o registro no bucket\n");
+            fclose(hash->fp);
+            return 0;
+        }
+
+        if(aux.nseq == 0) {
+            printf("Achou registro vazio no bucket\n");            
+            break;
+        }
     }
 
     // Bucket nao-cheio (insercao tranquila)
     if(i != hash->bucket_size){
         fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
-        fwrite(reg, sizeof(struct registro), 1, hash->fp);
+        fwrite(&reg, sizeof(struct registro), 1, hash->fp);
+        fclose(hash->fp);
+        return 1;
     }else{
 
         // Caso contrario, bucket cheio
