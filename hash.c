@@ -235,7 +235,7 @@ int RMV_HASH(Hash hash, entry_number_t chave, Registro reg){
     if(_NVLD_HASH(hash) || reg == NULL) return 0;
 
     // Abre o arquivo hash
-    hash->fp = fopen(hash->fname, "w");
+    hash->fp = fopen(hash->fname, "r+");
     if(hash->fp == NULL) return 0;
 
     bucket_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
@@ -246,12 +246,16 @@ int RMV_HASH(Hash hash, entry_number_t chave, Registro reg){
     aux.nseq = 0;
 
     for(bucket_size_t i = 0; i < hash->bucket_size; i++){
-        if(!fread(reg, sizeof(struct registro), 1, hash->fp)) return 0;
+        if(!fread(reg, sizeof(struct registro), 1, hash->fp)) {
+        	fclose(hash->fp);
+    		return 0;
+        }
 
         // Se eh chave, achou o registro, que jah estah em reg
         if(reg->nseq == chave){
             fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
             fwrite(&aux, sizeof(struct registro), 1, hash->fp);
+            fclose(hash->fp);
             return 1;
         }
     }
