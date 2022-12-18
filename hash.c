@@ -144,26 +144,26 @@ int INST_HASH(Hash hash, Registro reg){
         // Precisa duplicar diretorio (pg == pl)
         if(hash->pg == hash->dr[bucket].pl){
             // Bucket cheio, tem que duplicar diretorio
-            directory_t novo_dr = realloc(hash->dr, 2 * hash->dr_size);
-            if(novo_dr == NULL) return 0;
-
-            hash->dr = novo_dr;
-            hash->dr_size *= 2;
+		    hash->dr_size *= 2;
             hash->pg++;
 
-            // Copia a primeira metade para a segunda metade
+            hash->dr = (directory_t) realloc(hash->dr, hash->dr_size * sizeof(struct directory_entry));
+            if(hash->dr == NULL) return 0;
+
+            
+            //Copia a primeira metade para a segunda metade
             for(directory_size_t i = 0; i < hash->dr_size / 2; i++){
                 hash->dr[hash->dr_size / 2 + i].pl = hash->dr[i].pl;
                 hash->dr[hash->dr_size / 2 + i].bucket = hash->dr[i].bucket;
             }
         }
-
+        
         // Se precisou duplicar diretorio, fez isso no if acima
         // Se nao precisou duplicar, nao passou pelo if e eh soh
         // Arrumar o diretorio (criar novo bucket no final)
 
         // Proximo indice que aponta pro mesmo bucket original cheio
-        bucket_t bucket_duplicado = bucket + hash->dr_size / 2; // Conferir conta
+        bucket_t bucket_duplicado = bucket + hash->dr_size / 2;
         hash->dr[bucket].pl++;
 
         // Arruma as info do bucket duplicado (novo)
@@ -172,7 +172,8 @@ int INST_HASH(Hash hash, Registro reg){
         hash->dr[bucket_duplicado].pl++;
         fseek(hash->fp, 0, SEEK_END);
         hash->dr[bucket_duplicado].bucket = ftell(hash->fp);
-
+        hash->bucket_number ++;
+        
         long int ultimo_slot;
 
         // Vai para o bucket original
@@ -204,7 +205,7 @@ int INST_HASH(Hash hash, Registro reg){
                 qtd++;
             }
         }
-
+        /*
         // Registro da insercao cai no bucket original
         if(_HASH_FUNCTION(reg->nseq, hash->dr_size) == bucket){
             fseek(hash->fp, ultimo_slot, SEEK_SET);
@@ -225,8 +226,9 @@ int INST_HASH(Hash hash, Registro reg){
 
         // Como criou um bucket no final, bucket_number++
         hash->bucket_number++;
+        */
     }
-
+	
     fclose(hash->fp);
     return 1;
 }
