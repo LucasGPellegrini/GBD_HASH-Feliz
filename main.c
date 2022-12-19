@@ -28,6 +28,19 @@ int main()
     depth_t pg_inicial;
     entry_number_t chave;
 
+    int FLAG = 0;
+    FILE *dir;
+    dir = fopen("dir", "r+");
+    if (dir != NULL) {
+    	FLAG = 1;
+
+    	//fread(&h->dr_size, sizeof(directory_size_t), 1, dir); 
+	    //fread(&h->bucket_number, sizeof(bucket_t), 1, dir);
+	    //fread(&h->bucket_size, sizeof(bucket_size_t), 1, dir); 
+	    //fread(&h->pg, sizeof(depth_t), 1, dir);
+	    //fread(&h->dr, sizeof(directory_t) * h->dr_size, 1, dir);
+    }
+
 	do {
 		printf("LISTA DE OPCOES:\n\n");
 		printf(" [1] Criar Hash.\n");
@@ -92,6 +105,7 @@ int main()
                 break;
 
 			case MAXOP:
+				//PERSISTE_DIR(h);
 				printf("Encerrando o programa.\n");
 				
 				//esperando n segundos antes de encerrar o programa

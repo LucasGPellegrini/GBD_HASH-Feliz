@@ -79,6 +79,7 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
     }
 
     fclose(hash->fp);
+    //PERSISTE_DIR(hash);
 
     return 1;
 }
@@ -174,7 +175,6 @@ int INST_HASH(Hash hash, Registro reg){
         hash->dr[bucket_duplicado].bucket = ftell(hash->fp);
         hash->bucket_number ++;
         
-        long int ultimo_slot;
 
         // Vai para o bucket original
         fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);
@@ -188,7 +188,6 @@ int INST_HASH(Hash hash, Registro reg){
                 // Caso contrario, registro tem que ser colocado no bucket duplicado
                 // Portanto, abaixo, registro eh apagado do bucket original
                 fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
-                ultimo_slot = ftell(hash->fp);
                 // Limpa registro (nseq = 0) do bucket original
                 fwrite(&aux, sizeof(struct registro), 1, hash->fp);
             }
@@ -200,33 +199,40 @@ int INST_HASH(Hash hash, Registro reg){
         // Escreve o buffer no bucket duplicado (cria no final do arquivo)
         bucket_size_t qtd = 0;
         for(bucket_size_t j = 0; j < hash->bucket_size; j++){
-            if(buffer[j].nseq != 0){
-                fwrite(&buffer[j], sizeof(struct registro), 1, hash->fp);
-                qtd++;
-            }
+            fwrite(&buffer[j], sizeof(struct registro), 1, hash->fp);
+            qtd++;
         }
-        /*
+        
         // Registro da insercao cai no bucket original
         if(_HASH_FUNCTION(reg->nseq, hash->dr_size) == bucket){
-            fseek(hash->fp, ultimo_slot, SEEK_SET);
-            fwrite(reg, sizeof(struct registro), 1, hash->fp);
+            fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);
+            for(original = 0; original < hash->bucket_size; original++){
+                fread(&aux, sizeof(struct registro), 1, hash->fp);
+                if(aux.nseq == 0) break;
+            }
+
+            if(original != hash->bucket_size){
+                fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
+                fwrite(reg, sizeof(struct registro), 1, hash->fp);
+            }
         }
         // Registro cai no novo bucket
         else{
-            fseek(hash->fp, hash->dr[bucket_duplicado].bucket + qtd * sizeof(struct registro), SEEK_SET);
-            fwrite(reg, sizeof(struct registro), 1, hash->fp);
-            qtd++;
-        }
+            fseek(hash->fp, hash->dr[bucket_duplicado].bucket, SEEK_SET);
+            for(original = 0; original < hash->bucket_size; original++){
+                fread(&aux, sizeof(struct registro), 1, hash->fp);
+                if(aux.nseq == 0) break;
+            }
 
-        // Enche o resto do bucket duplicado com nseq = 0
-        fseek(hash->fp, hash->dr[bucket_duplicado].bucket + qtd * sizeof(struct registro), SEEK_SET);
-        for(qtd; qtd < hash->bucket_size; qtd++){
-            fwrite(&aux, sizeof(struct registro), 1, hash->fp);
+            if(original != hash->bucket_size){
+                fseek(hash->fp, -(long int)sizeof(struct registro), SEEK_CUR);
+                fwrite(reg, sizeof(struct registro), 1, hash->fp);
+                qtd++;
+            }
         }
 
         // Como criou um bucket no final, bucket_number++
         hash->bucket_number++;
-        */
     }
 	
     fclose(hash->fp);
@@ -240,7 +246,7 @@ int RMV_HASH(Hash hash, entry_number_t chave, Registro reg){
     hash->fp = fopen(hash->fname, "r+");
     if(hash->fp == NULL) return 0;
 
-    bucket_t bucket = _HASH_FUNCTION(reg->nseq, hash->dr_size);
+    bucket_t bucket = _HASH_FUNCTION(chave, hash->dr_size);
 
     fseek(hash->fp, hash->dr[bucket].bucket, SEEK_SET);
 
@@ -299,5 +305,20 @@ int PRNT_HASH(Hash hash){
 
     fclose(hash->fp);
 
+    return 1;
+}
+
+int PERSISTE_DIR(Hash hash) {
+    FILE *dir = fopen("dir", "w+");
+    if (!dir) return 0;
+
+    fwrite(&hash->dr_size, sizeof(directory_size_t), 1, dir); 
+    fwrite(&hash->bucket_number, sizeof(bucket_t), 1, dir);
+    fwrite(&hash->bucket_size, sizeof(bucket_size_t), 1, dir); 
+    fwrite(&hash->pg, sizeof(depth_t), 1, dir);
+    fwrite(&hash->dr, sizeof(directory_t) * hash->dr_size, 1, dir);
+    
+
+    fclose(dir);
     return 1;
 }

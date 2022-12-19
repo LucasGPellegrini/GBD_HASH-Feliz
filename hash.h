@@ -37,5 +37,6 @@ int SRCH_HASH(Hash hash, entry_number_t chave, Registro reg);
 int INST_HASH(Hash hash, Registro reg);
 int RMV_HASH(Hash hash, entry_number_t chave, Registro reg);
 int PRNT_HASH(Hash hash);
+int PERSISTE_DIR(Hash hash);
 
 #endif
