@@ -34,22 +34,30 @@ int main()
     if (dir != NULL) {
     	FLAG = 1;
 
-    	//fread(&h->dr_size, sizeof(directory_size_t), 1, dir); 
-	    //fread(&h->bucket_number, sizeof(bucket_t), 1, dir);
-	    //fread(&h->bucket_size, sizeof(bucket_size_t), 1, dir); 
-	    //fread(&h->pg, sizeof(depth_t), 1, dir);
-	    //fread(&h->dr, sizeof(directory_t) * h->dr_size, 1, dir);
+    	directory_size_t tam;
+    	fread(&tam, sizeof(directory_size_t), 1, dir); 
+    	bucket_t bn;
+	    fread(&bn, sizeof(bucket_t), 1, dir);
+	    bucket_size_t bs;
+	    fread(&bs, sizeof(bucket_size_t), 1, dir);
+	    depth_t depth;
+	    fread(&depth, sizeof(depth_t), 1, dir);
+	    directory_t dir_t;
+	    fread(&dir_t, sizeof(directory_t), 1, dir);
+
+	   FLAG = RECUPERA_DIR(&h, tam, bs, bn, depth, dir_t, "arquivo");
     }
 
 	do {
-		printf("LISTA DE OPCOES:\n\n");
+		printf("=-=-=LISTA DE OPCOES:-=-=-\n\n");
+		if (FLAG == 1) printf("(Já Existe um hash Criado)\n");
 		printf(" [1] Criar Hash.\n");
 		printf(" [2] Procurar Registro.\n");
 		printf(" [3] Inserir Registro.\n");
 		printf(" [4] Remover Registro.\n");
 		printf(" [5] Imprimir Hash.\n");
 		printf(" [6] Sair.\n");
-		printf("\nDigite uma das opcoes: ");
+		printf("\n Digite uma das opcoes: ");
 
 		scanf("%d", &op);
 		system(limpar);
@@ -60,8 +68,10 @@ int main()
 				printf("Entre com a profundidade global inicial: ");
                 scanf("%u", &pg_inicial);
 
-                if(CRT_HASH(&h, pg_inicial, "arquivo"))
+                if(CRT_HASH(&h, pg_inicial, "arquivo")){
                     printf("Hash criado com sucesso!\n\n");
+                	FLAG = 1;
+                }
                 else
                     printf("Houve algum erro!\n\n");
                 break;
@@ -105,7 +115,7 @@ int main()
                 break;
 
 			case MAXOP:
-				//PERSISTE_DIR(h);
+				PERSISTE_DIR(h);
 				printf("Encerrando o programa.\n");
 				
 				//esperando n segundos antes de encerrar o programa

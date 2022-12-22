@@ -38,5 +38,6 @@ int INST_HASH(Hash hash, Registro reg);
 int RMV_HASH(Hash hash, entry_number_t chave, Registro reg);
 int PRNT_HASH(Hash hash);
 int PERSISTE_DIR(Hash hash);
+int RECUPERA_DIR(Hash *hash_ptr, directory_size_t tam, bucket_size_t bs, bucket_t bn, depth_t depth, directory_t dir_t, char* hdir);
 
 #endif
