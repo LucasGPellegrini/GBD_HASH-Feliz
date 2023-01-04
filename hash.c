@@ -42,7 +42,7 @@ int CRT_HASH(Hash* hash_ptr, depth_t pg_inicial, char* hdir){
     }
 
     hash->fname = malloc(MAX_REG * sizeof(char));
-    if(hash->dr == NULL){
+    if(hash->fname == NULL){
         free(hash);
         hash = NULL;
         return 0;
