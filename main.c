@@ -42,14 +42,15 @@ int main()
     }
 
 	do {
-		printf("LISTA DE OPCOES:\n\n");
+		printf("=-=-=LISTA DE OPCOES:-=-=-\n\n");
+		if (FLAG == 1) printf("(Já Existe um hash Criado)\n");
 		printf(" [1] Criar Hash.\n");
 		printf(" [2] Procurar Registro.\n");
 		printf(" [3] Inserir Registro.\n");
 		printf(" [4] Remover Registro.\n");
 		printf(" [5] Imprimir Hash.\n");
 		printf(" [6] Sair.\n");
-		printf("\nDigite uma das opcoes: ");
+		printf("\n Digite uma das opcoes: ");
 
 		scanf("%d", &op);
 		system(limpar);
@@ -60,8 +61,10 @@ int main()
 				printf("Entre com a profundidade global inicial: ");
                 scanf("%u", &pg_inicial);
 
-                if(CRT_HASH(&h, pg_inicial, "arquivo"))
+                if(CRT_HASH(&h, pg_inicial, "arquivo")){
                     printf("Hash criado com sucesso!\n\n");
+                	FLAG = 1;
+                }
                 else
                     printf("Houve algum erro!\n\n");
                 break;
@@ -105,7 +108,7 @@ int main()
                 break;
 
 			case MAXOP:
-				//PERSISTE_DIR(h);
+				PERSISTE_DIR(h);
 				printf("Encerrando o programa.\n");
 				
 				//esperando n segundos antes de encerrar o programa
