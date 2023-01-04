@@ -34,11 +34,11 @@ int main()
     if (dir != NULL) {
     	FLAG = 1;
 
-    	//fread(&h->dr_size, sizeof(directory_size_t), 1, dir); 
-	    //fread(&h->bucket_number, sizeof(bucket_t), 1, dir);
-	    //fread(&h->bucket_size, sizeof(bucket_size_t), 1, dir); 
-	    //fread(&h->pg, sizeof(depth_t), 1, dir);
-	    //fread(&h->dr, sizeof(directory_t) * h->dr_size, 1, dir);
+    	fread(&h->dr_size, sizeof(directory_size_t), 1, dir); 
+	    fread(&h->bucket_number, sizeof(bucket_t), 1, dir);
+	    fread(&h->bucket_size, sizeof(bucket_size_t), 1, dir); 
+	    fread(&h->pg, sizeof(depth_t), 1, dir);
+	    fread(&h->dr, sizeof(directory_t) * h->dr_size, 1, dir);
     }
 
 	do {

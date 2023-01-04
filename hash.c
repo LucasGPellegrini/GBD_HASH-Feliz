@@ -280,7 +280,7 @@ int PRNT_HASH(Hash hash){
     if(hash->fp == NULL) return 0;
 
     printf("Tamanho diretorio = %u\n", hash->dr_size);
-    printf("Buckets instanciados = %u\n", hash->bucket_number);
+    printf("Buckets instanciados = %ld\n", hash->bucket_number);
     printf("Numero de registro por bucket = %u\n", hash->bucket_size);
     printf("Profundidade global = %u\n", hash->pg);
 
@@ -289,7 +289,7 @@ int PRNT_HASH(Hash hash){
     struct registro aux;
 
     for(directory_size_t i = 0; i < hash->dr_size; i++){
-        printf("(B%u, %u):", hash->dr[i].bucket, hash->dr[i].pl);
+        printf("(B%ld, %u):", hash->dr[i].bucket, hash->dr[i].pl);
 
         fseek(hash->fp, hash->dr[i].bucket, SEEK_SET);
 
