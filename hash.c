@@ -280,7 +280,7 @@ int PRNT_HASH(Hash hash){
     if(hash->fp == NULL) return 0;
 
     printf("Tamanho diretorio = %u\n", hash->dr_size);
-    printf("Buckets instanciados = %ld\n", hash->bucket_number);
+    printf("Buckets instanciados = %u\n", hash->bucket_number);
     printf("Numero de registro por bucket = %u\n", hash->bucket_size);
     printf("Profundidade global = %u\n", hash->pg);
 
@@ -289,7 +289,7 @@ int PRNT_HASH(Hash hash){
     struct registro aux;
 
     for(directory_size_t i = 0; i < hash->dr_size; i++){
-        printf("(B%ld, %u):", hash->dr[i].bucket, hash->dr[i].pl);
+        printf("(B%u, %u):", hash->dr[i].bucket, hash->dr[i].pl);
 
         fseek(hash->fp, hash->dr[i].bucket, SEEK_SET);
 
@@ -310,60 +310,15 @@ int PRNT_HASH(Hash hash){
 
 int PERSISTE_DIR(Hash hash) {
     FILE *dir = fopen("dir", "w+");
-    if (dir == NULL) return 0;
+    if (!dir) return 0;
 
     fwrite(&hash->dr_size, sizeof(directory_size_t), 1, dir); 
     fwrite(&hash->bucket_number, sizeof(bucket_t), 1, dir);
     fwrite(&hash->bucket_size, sizeof(bucket_size_t), 1, dir); 
     fwrite(&hash->pg, sizeof(depth_t), 1, dir);
-    fwrite(&hash->dr, sizeof(directory_t), 1, dir);
+    fwrite(&hash->dr, sizeof(directory_t) * hash->dr_size, 1, dir);
+    
 
     fclose(dir);
-    return 1;
-}
-
-int RECUPERA_DIR(Hash *hash_ptr, directory_size_t tam, bucket_size_t bs, bucket_t bn, depth_t depth, directory_t dir_t, char* hdir) {
-    *hash_ptr = malloc(sizeof(struct hash));
-    if(*hash_ptr == NULL) return 0;
-
-    Hash hash = *hash_ptr;
-
-    hash->dr_size = tam;
-    hash->bucket_size = bs;
-    hash->bucket_number = bn;
-    hash->pg = depth;
-    hash->dr = malloc(hash->dr_size * sizeof(struct directory_entry));
-    if (hash->dr == NULL) {
-    	free(hash->dr);
-    	return 0;
-    }
-
-    hash->fname = malloc(MAX_REG * sizeof(char));
-    if (hash->fname == NULL) {
-    	free(hash->fname);
-    	return 0;
-    }
-   
-	strcpy(hash->fname, hdir);
-	hash->fp = fopen(hash->fname, "r");
-    if(hash->fp == NULL){
-        free(hash->dr);
-        free(hash);
-        hash = NULL;
-        return 0;
-    }
-
-    rewind(hash->fp);
-    long int fp_pointer;
-	for(directory_size_t i = 0; i < hash->dr_size; i++){
-        fp_pointer = ftell(hash->fp);
-        for(directory_size_t j = 0; j < hash->bucket_size; j++){
-        	fseek(hash->fp, sizeof(struct registro), SEEK_CUR);
-        }
-        hash->dr[i].pl = hash->pg;
-        hash->dr[i].bucket = fp_pointer;
-    }
-
-    fclose(hash->fp);
     return 1;
 }
