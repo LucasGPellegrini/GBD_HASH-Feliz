@@ -91,7 +91,7 @@ int main()
                 printf("Entre com a chave: ");
                 scanf("%u", &reg.nseq);
                 printf("Entre com o texto: ");
-                scanf("%s", &reg.text);
+                scanf("%s", reg.text);
 
                 if(INST_HASH(h, &reg))
                     printf("Registro inserido com sucesso!\n\n");
